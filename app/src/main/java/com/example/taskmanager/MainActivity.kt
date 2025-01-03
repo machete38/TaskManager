@@ -1,36 +1,40 @@
 package com.example.taskmanager
 
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewStub
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
-    lateinit var vs: ViewStub
-    lateinit var repository: TaskRepository
-    var tasks: List<Task>? = null
+    private lateinit var vs: ViewStub
+    private lateinit var repository: TaskRepository
+    private var tasks: List<Task> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         initViews()
-
         initRepository()
-  
     }
 
     private fun initRepository() {
-        val taskDao = Room.databaseBuilder(this, TaskDatabase::class.java, "task-database").build().taskDao()
+        val database = Room.databaseBuilder(applicationContext, TaskDatabase::class.java, "task-database").build()
+        val taskDao = database.taskDao()
         repository = TaskRepository(taskDao)
-        initViewStub(getTasks())
+        loadTasks()
+    }
+
+    private fun loadTasks() {
+        lifecycleScope.launch {
+            tasks = withContext(Dispatchers.IO) {
+                repository.getAllTasks()
+            }
+            initViewStub(tasks.isNotEmpty())
+        }
     }
 
     private fun initViewStub(objectsExist: Boolean) {
@@ -39,15 +43,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getViewStubLayout(objectsExist: Boolean): Int {
-        return when {
-            objectsExist -> R.layout.task_list
-            else -> R.layout.no_tasks
-        }
-    }
-
-    private fun getTasks(): Boolean {
-        tasks = repository.allTasks
-        return tasks == null
+        return if (objectsExist) R.layout.task_list else R.layout.no_tasks
     }
 
     private fun initViews() {

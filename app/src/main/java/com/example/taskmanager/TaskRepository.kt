@@ -1,10 +1,7 @@
 package com.example.taskmanager
 
-import androidx.lifecycle.LiveData
-
 class TaskRepository(private val taskDao: TaskDao) {
-
-    val allTasks: List<Task>? = taskDao.getAllTasks()
+    suspend fun getAllTasks(): List<Task> = taskDao.getAllTasks() ?: emptyList()
 
     suspend fun insert(task: Task) {
         taskDao.insertTask(task)
